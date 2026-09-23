@@ -1,0 +1,174 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@inject IAuthorizationService AuthorizationService
+
+@{
+    var canSeeAudit =
+        (await AuthorizationService.AuthorizeAsync(
+            User,
+            Context,
+            "ITDriftOnly"
+        )).Succeeded;
+
+    var currentController =
+        ViewContext.RouteData.Values["controller"]?.ToString();
+}
+
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>@ViewData["Title"] - Elevtilgang</title>
+
+    <script type="importmap"></script>
+
+    <link rel="stylesheet"
+          href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <link rel="stylesheet"
+          href="~/css/site.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/tap.styles.css"
+          asp-append-version="true" />
+</head>
+
+<body>
+
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom shadow-sm">
+
+            <div class="container">
+
+                <!-- APP-NAVN / FORSIDE -->
+                <a class="navbar-brand fw-semibold"
+                   asp-controller="Home"
+                   asp-action="Index">
+
+                    Elevtilgang
+
+                </a>
+
+                <!-- MOBILMENY -->
+                <button class="navbar-toggler"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#mainNavbar"
+                        aria-controls="mainNavbar"
+                        aria-expanded="false"
+                        aria-label="Vis/skjul meny">
+
+                    <span class="navbar-toggler-icon"></span>
+
+                </button>
+
+                <!-- MENY -->
+                <div class="collapse navbar-collapse"
+                     id="mainNavbar">
+
+                    <ul class="navbar-nav ms-auto">
+
+                        <!-- FORSIDE -->
+<li class="nav-item">
+
+    <a class="nav-link @(currentController == "Home" ? "fw-bold" : "")"
+       asp-controller="Home"
+       asp-action="Index">
+
+        Forside
+
+    </a>
+
+</li>
+
+<!-- GENERER TAP -->
+<li class="nav-item">
+
+    <a class="nav-link @(currentController == "A3" ? "fw-bold" : "")"
+       asp-controller="A3"
+       asp-action="Index">
+
+        Generer TAP
+
+    </a>
+
+</li>
+
+<!-- AUDIT - KUN ITDRIFT -->
+@if (canSeeAudit)
+{
+    <li class="nav-item">
+
+        <a class="nav-link @(currentController == "Audit" ? "fw-bold" : "")"
+           asp-controller="Audit"
+           asp-action="Index">
+
+            Audit-logg
+
+        </a>
+
+    </li>
+}
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+        </nav>
+    </header>
+
+
+    <!-- INNHOLD -->
+    <div class="container">
+
+        <main role="main"
+              class="pb-5">
+
+            @RenderBody()
+
+        </main>
+
+    </div>
+
+
+    <!-- FOOTER -->
+    <footer class="border-top text-muted py-3 mt-auto">
+
+        <div class="container small">
+
+            Ringerike kommune &ndash; Elevtilgang
+
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                var email = User.Identity.Name
+                    ?? User.FindFirst("preferred_username")?.Value
+                    ?? User.FindFirst("email")?.Value;
+
+                if (!string.IsNullOrWhiteSpace(email))
+                {
+                    <span class="float-end">Innlogget som @email</span>
+                }
+            }
+
+        </div>
+
+    </footer>
+
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="~/js/site.js"
+            asp-append-version="true"></script>
+
+    @await RenderSectionAsync(
+        "Scripts",
+        required: false)
+
+</body>
+</html>

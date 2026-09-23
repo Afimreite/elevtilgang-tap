@@ -1,0 +1,164 @@
+@model List<string>
+
+@{
+    ViewData["Title"] = "Audit-logg";
+}
+
+<div class="py-4">
+
+    <div class="mb-4">
+        <h1 class="h2 mb-2">
+            Audit-logg
+        </h1>
+
+<p class="text-muted mb-2">
+    Oversikt over TAP-generering i Elevpålogging.
+</p>
+
+<div class="alert alert-secondary small mb-0">
+    Opplysningene nedenfor hentes fra applikasjonens lokale
+    auditlogg på serveren. Loggen er ment som et teknisk
+    sporingsgrunnlag og kan være ufullstendig ved drifts-,
+    skrive- eller konfigurasjonsfeil. Den bør ikke alene brukes
+    som dokumentasjon på alle TAP-hendelser.
+</div>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <div class="alert alert-info">
+            Ingen audit-hendelser er registrert.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+
+            <table class="table table-striped table-hover align-middle">
+
+                <thead>
+                    <tr>
+                        <th>Tidspunkt</th>
+                        <th>Resultat</th>
+                        <th>Utført av</th>
+                        <th>Elev</th>
+                        <th>Skole</th>
+                        <th>Klasse</th>
+                        <th>IP</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    @foreach (var line in Model)
+                    {
+                        var parts = line
+                            .Split('|')
+                            .Select(x => x.Trim())
+                            .ToList();
+
+                        string GetValue(string key)
+                        {
+                            var item = parts
+                                .FirstOrDefault(x =>
+                                    x.StartsWith(
+                                        key + "=",
+                                        StringComparison.OrdinalIgnoreCase));
+
+                            if (item == null)
+                                return "";
+
+                            return item.Substring(key.Length + 1);
+                        }
+
+                        var timestamp =
+                            parts.Count > 0
+                                ? parts[0]
+                                : "";
+
+                        var result =
+                            parts.Count > 1
+                                ? parts[1]
+                                : "";
+
+                        var operatorUpn =
+                            GetValue("Operator");
+
+                        var targetName =
+                            GetValue("TargetName");
+
+                        var targetUpn =
+                            GetValue("TargetUpn");
+
+                        var school =
+                            GetValue("School");
+
+                        var studentClass =
+                            GetValue("Class");
+
+                        var ip =
+                            GetValue("IP");
+
+                        <tr>
+                            <td>
+                                @timestamp
+                            </td>
+
+                            <td>
+                                @if (result == "SUCCESS")
+                                {
+                                    <span class="badge bg-success">
+                                        Success
+                                    </span>
+                                }
+                                else if (result == "DENIED")
+                                {
+                                    <span class="badge bg-warning text-dark">
+                                        Denied
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">
+                                        @result
+                                    </span>
+                                }
+                            </td>
+
+                            <td>
+                                @operatorUpn
+                            </td>
+
+                            <td>
+                                <strong>@targetName</strong>
+
+                                @if (!string.IsNullOrEmpty(targetUpn))
+                                {
+                                    <div class="text-muted small">
+                                        @targetUpn
+                                    </div>
+                                }
+                            </td>
+
+                            <td>
+                                @school
+                            </td>
+
+                            <td>
+                                @studentClass
+                            </td>
+
+                            <td>
+                                @ip
+                            </td>
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+    }
+
+</div>

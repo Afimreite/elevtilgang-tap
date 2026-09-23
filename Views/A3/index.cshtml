@@ -1,0 +1,778 @@
+@model List<tap.Models.StudentViewModel>
+
+@{
+    ViewData["Title"] = "Generer TAP";
+
+    var schools = Model
+        .Where(x => !string.IsNullOrWhiteSpace(x.SchoolName))
+        .Select(x => x.SchoolName)
+        .Distinct()
+        .OrderBy(x => x)
+        .ToList();
+
+    var classes = Model
+        .Where(x => !string.IsNullOrWhiteSpace(x.ClassName))
+        .Select(x => x.ClassName)
+        .Distinct()
+        .OrderBy(x => x)
+        .ToList();
+}
+
+<div class="py-4">
+
+    <div class="mb-4">
+        <h1 class="h2 mb-2">
+            Generer TAP for elev
+        </h1>
+
+        <p class="text-muted mb-0">
+            Finn riktig elev ved å velge skole og klasse, eller søk på navn.
+        </p>
+    </div>
+
+    @Html.AntiForgeryToken()
+
+    <!-- =====================================================
+         FILTER
+         ===================================================== -->
+    <div class="card border-0 bg-light mb-4">
+        <div class="card-body">
+
+            <div class="row g-3 align-items-end">
+
+                <!-- SKOLE -->
+                <div class="col-md-3">
+
+                    <label for="schoolFilter"
+                           class="form-label">
+                        <strong>Skole</strong>
+                    </label>
+
+                    @if (schools.Count == 1)
+                    {
+                        <select id="schoolFilter"
+                                class="form-select"
+                                disabled>
+
+                            <option value="@schools[0]" selected>
+                                @schools[0]
+                            </option>
+
+                        </select>
+                    }
+                    else
+                    {
+                        <select id="schoolFilter"
+                                class="form-select">
+
+                            <option value="">
+                                Alle skoler
+                            </option>
+
+                            @foreach (var school in schools)
+                            {
+                                <option value="@school">
+                                    @school
+                                </option>
+                            }
+
+                        </select>
+                    }
+
+                </div>
+
+                <!-- KLASSE -->
+                <div class="col-md-3">
+
+                    <label for="classFilter"
+                           class="form-label">
+                        <strong>Klasse</strong>
+                    </label>
+
+                    <select id="classFilter"
+                            class="form-select">
+
+                        <option value="">
+                            Alle klasser
+                        </option>
+
+                        @foreach (var className in classes)
+                        {
+                            <option value="@className">
+                                @className
+                            </option>
+                        }
+
+                    </select>
+
+                </div>
+
+                <!-- SØK -->
+                <div class="col-md-6">
+
+                    <label for="studentSearch"
+                           class="form-label">
+                        <strong>Søk etter elev</strong>
+                    </label>
+
+                    <input id="studentSearch"
+                           type="text"
+                           class="form-control"
+                           placeholder="Skriv navn eller brukernavn..." />
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- =====================================================
+         ANTALL TREFF
+         ===================================================== -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+
+        <div class="text-muted small">
+            <span id="studentCount"></span>
+        </div>
+
+    </div>
+
+    <!-- =====================================================
+         ELEVTABELL
+         ===================================================== -->
+    <div class="table-responsive">
+
+        <table class="table table-striped table-hover align-middle">
+
+            <thead>
+                <tr>
+                    <th>Navn</th>
+                    <th>Skole</th>
+                    <th>Klasse</th>
+                    <th>UPN</th>
+                    <th>Handling</th>
+                </tr>
+            </thead>
+
+            <tbody id="studentTableBody">
+
+                @foreach (var student in Model)
+                {
+                    <tr data-school="@student.SchoolName"
+                        data-class="@student.ClassName"
+                        data-name="@student.Name"
+                        data-upn="@student.UPN">
+
+                        <td>
+                            <strong>@student.Name</strong>
+                        </td>
+
+                        <td>
+                            @student.SchoolName
+                        </td>
+
+                        <td>
+                            @if (!string.IsNullOrEmpty(student.ClassName))
+                            {
+                                <strong>
+                                    @student.ClassName
+                                </strong>
+                            }
+                            else
+                            {
+                                <span class="text-muted">
+                                    -
+                                </span>
+                            }
+                        </td>
+
+                        <td>
+                            @student.UPN
+                        </td>
+
+                        <td>
+                            <div class="tap-container">
+
+                                <button type="button"
+                                        class="btn btn-primary btn-sm generate-tap-button"
+                                        data-user-id="@student.Id"
+                                        data-student-name="@student.Name"
+                                        data-student-upn="@student.UPN"
+                                        data-school="@student.SchoolName"
+                                        data-class="@student.ClassName">
+                                    Generer TAP
+                                </button>
+
+                                <div class="tap-result mt-2"
+                                     style="display:none;">
+                                </div>
+
+                            </div>
+                        </td>
+
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <!-- =====================================================
+         INGEN TREFF
+         ===================================================== -->
+    <div id="noStudentsMessage"
+         class="alert alert-light border text-center"
+         style="display:none;">
+
+        Ingen elever funnet med valgte filtre.
+
+    </div>
+
+</div>
+
+
+<script>
+
+    // =====================================================
+    // ELEMENTER
+    // =====================================================
+
+    const schoolFilter =
+        document.getElementById("schoolFilter");
+
+    const classFilter =
+        document.getElementById("classFilter");
+
+    const studentSearch =
+        document.getElementById("studentSearch");
+
+    const studentCount =
+        document.getElementById("studentCount");
+
+    const noStudentsMessage =
+        document.getElementById("noStudentsMessage");
+
+    const rows =
+        document.querySelectorAll(
+            "#studentTableBody tr"
+        );
+
+    // =====================================================
+    // VIS KUN TILGJENGELIGE KLASSER PR SKOLE
+    // =====================================================
+
+function updateClassFilter() {
+
+    const selectedSchool =
+        schoolFilter.value;
+
+    const currentClass =
+        classFilter.value;
+
+    const availableClasses =
+        new Set();
+
+    rows.forEach(function (row) {
+
+        const studentSchool =
+            row.getAttribute("data-school") || "";
+
+        const studentClass =
+            row.getAttribute("data-class") || "";
+
+        // Ta bare med klasser som tilhører valgt skole.
+        // Hvis "Alle skoler" er valgt, tas alle med.
+        if (
+            studentClass !== "" &&
+            (
+                selectedSchool === "" ||
+                studentSchool === selectedSchool
+            )
+        ) {
+            availableClasses.add(studentClass);
+        }
+    });
+
+    // Sorter klassene naturlig:
+    // 8A, 8B, 9A, 10A, Eik osv.
+    const sortedClasses =
+        Array.from(availableClasses)
+            .sort(function (a, b) {
+                return a.localeCompare(
+                    b,
+                    "no",
+                    {
+                        numeric: true,
+                        sensitivity: "base"
+                    }
+                );
+            });
+
+    // Bygg dropdown på nytt
+    classFilter.innerHTML =
+        '<option value="">Alle klasser</option>';
+
+    sortedClasses.forEach(function (className) {
+
+        const option =
+            document.createElement("option");
+
+        option.value = className;
+        option.textContent = className;
+
+        classFilter.appendChild(option);
+    });
+
+    // Behold valgt klasse dersom den fortsatt finnes
+    if (availableClasses.has(currentClass)) {
+        classFilter.value = currentClass;
+    }
+    else {
+        classFilter.value = "";
+    }
+}
+
+
+    // =====================================================
+    // FILTRER ELEVER
+    // =====================================================
+
+    function filterStudents() {
+
+        const selectedSchool =
+            schoolFilter.value;
+
+        const selectedClass =
+            classFilter.value;
+
+        const searchText =
+            studentSearch.value
+                .trim()
+                .toLowerCase();
+
+        let visibleCount = 0;
+
+        rows.forEach(function (row) {
+
+            const studentSchool =
+                row.getAttribute("data-school") || "";
+
+            const studentClass =
+                row.getAttribute("data-class") || "";
+
+            const studentName =
+                (row.getAttribute("data-name") || "")
+                    .toLowerCase();
+
+            const studentUpn =
+                (row.getAttribute("data-upn") || "")
+                    .toLowerCase();
+
+
+            // -------------------------
+            // SKOLE
+            // -------------------------
+
+            const schoolMatches =
+                selectedSchool === "" ||
+                studentSchool === selectedSchool;
+
+
+            // -------------------------
+            // KLASSE
+            // -------------------------
+
+            const classMatches =
+                selectedClass === "" ||
+                studentClass === selectedClass;
+
+
+            // -------------------------
+            // SØK
+            // -------------------------
+
+            const searchMatches =
+                searchText === "" ||
+                studentName.includes(searchText) ||
+                studentUpn.includes(searchText);
+
+
+            // -------------------------
+            // RESULTAT
+            // -------------------------
+
+            if (
+                schoolMatches &&
+                classMatches &&
+                searchMatches
+            ) {
+                row.style.display = "";
+                visibleCount++;
+            }
+            else {
+                row.style.display = "none";
+            }
+
+        });
+
+
+        // =================================================
+        // VIS ANTALL ELEVER
+        // =================================================
+
+        if (visibleCount === 1) {
+            studentCount.textContent =
+                "1 elev";
+        }
+        else {
+            studentCount.textContent =
+                visibleCount + " elever";
+        }
+
+
+        // =================================================
+        // INGEN TREFF
+        // =================================================
+
+        noStudentsMessage.style.display =
+            visibleCount === 0
+                ? ""
+                : "none";
+    }
+
+
+    // =====================================================
+    // FILTER EVENTS
+    // =====================================================
+
+schoolFilter.addEventListener(
+    "change",
+    function () {
+
+        updateClassFilter();
+        filterStudents();
+
+    }
+);
+
+    classFilter.addEventListener(
+        "change",
+        filterStudents
+    );
+
+    studentSearch.addEventListener(
+        "input",
+        filterStudents
+    );
+
+
+    // =====================================================
+    // ANTIFORGERY TOKEN
+    // =====================================================
+
+    const antiForgeryToken =
+        document.querySelector(
+            'input[name="__RequestVerificationToken"]'
+        ).value;
+
+
+    // =====================================================
+    // GENERER TAP MED AJAX
+    // =====================================================
+
+    document.querySelectorAll(
+        ".generate-tap-button"
+    ).forEach(function (button) {
+
+        button.addEventListener(
+            "click",
+            async function () {
+
+                // =================================================
+                // HENT DATA FRA ELEVRADEN
+                // =================================================
+
+                const userId =
+                    button.getAttribute(
+                        "data-user-id"
+                    );
+
+                const studentName =
+                    button.getAttribute(
+                        "data-student-name"
+                    ) || "";
+
+                const studentUpn =
+                    button.getAttribute(
+                        "data-student-upn"
+                    ) || "";
+
+                const school =
+                    button.getAttribute(
+                        "data-school"
+                    ) || "";
+
+                const studentClass =
+                    button.getAttribute(
+                        "data-class"
+                    ) || "";
+
+
+                const container =
+                    button.closest(
+                        ".tap-container"
+                    );
+
+                const resultBox =
+                    container.querySelector(
+                        ".tap-result"
+                    );
+
+                const originalText =
+                    button.textContent.trim();
+
+
+                // =================================================
+                // HINDRE DOBBELTKLIKK
+                // =================================================
+
+                button.disabled = true;
+
+                button.textContent =
+                    "Genererer...";
+
+                resultBox.style.display =
+                    "none";
+
+                resultBox.innerHTML =
+                    "";
+
+
+                try {
+
+                    const formData =
+                        new FormData();
+
+
+                    // =================================================
+                    // DATA TIL CONTROLLER
+                    // =================================================
+
+                    formData.append(
+                        "userId",
+                        userId
+                    );
+
+                    formData.append(
+                        "studentName",
+                        studentName
+                    );
+
+                    formData.append(
+                        "studentUpn",
+                        studentUpn
+                    );
+
+                    formData.append(
+                        "school",
+                        school
+                    );
+
+                    formData.append(
+                        "studentClass",
+                        studentClass
+                    );
+
+
+                    // =================================================
+                    // ANTIFORGERY
+                    // =================================================
+
+                    formData.append(
+                        "__RequestVerificationToken",
+                        antiForgeryToken
+                    );
+
+
+                    // =================================================
+                    // KALL CONTROLLER
+                    // =================================================
+
+                    const response =
+                        await fetch(
+                            "/A3/GenerateTap",
+                            {
+                                method: "POST",
+                                body: formData
+                            }
+                        );
+
+
+                    let data;
+
+                    try {
+
+                        data =
+                            await response.json();
+
+                    }
+                    catch {
+
+                        throw new Error(
+                            "Ugyldig svar fra serveren."
+                        );
+
+                    }
+
+
+                    // =================================================
+                    // FEIL
+                    // =================================================
+
+                    if (
+                        !response.ok ||
+                        !data.success
+                    ) {
+
+                        throw new Error(
+                            data.message ||
+                            "Kunne ikke generere TAP."
+                        );
+
+                    }
+
+
+                    // =================================================
+                    // VIS TAP
+                    // =================================================
+
+                    resultBox.innerHTML = `
+                        <div class="alert alert-success py-3 px-3 mb-0">
+
+                            <div class="fw-semibold mb-2">
+                                Ny TAP opprettet
+                            </div>
+
+                            <div class="mb-2">
+
+                                <span class="tap-code fs-4 fw-bold">
+                                    ${data.tap}
+                                </span>
+
+                            </div>
+
+                            <div class="small mb-3">
+
+                                Koden er gyldig i ${data.lifetimeMinutes} minutter
+                                og ${data.isUsableOnce ? "kan brukes én gang" : "kan brukes flere ganger"}.
+
+                                <br>
+
+                                Eventuell tidligere TAP for eleven
+                                er ikke lenger gyldig.
+
+                            </div>
+
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm copy-tap-button">
+
+                                Kopier kode
+
+                            </button>
+
+                        </div>
+                    `;
+
+                    resultBox.style.display =
+                        "";
+
+
+                    // =================================================
+                    // KOPIER TAP
+                    // =================================================
+
+                    const copyButton =
+                        resultBox.querySelector(
+                            ".copy-tap-button"
+                        );
+
+                    copyButton.addEventListener(
+                        "click",
+                        async function () {
+
+                            try {
+
+                                await navigator
+                                    .clipboard
+                                    .writeText(
+                                        data.tap
+                                    );
+
+                                copyButton.textContent =
+                                    "Kopiert";
+
+                                setTimeout(
+                                    function () {
+
+                                        copyButton.textContent =
+                                            "Kopier kode";
+
+                                    },
+                                    1500
+                                );
+
+                            }
+                            catch {
+
+                                copyButton.textContent =
+                                    "Kunne ikke kopiere";
+
+                            }
+
+                        }
+                    );
+
+                }
+                catch (error) {
+
+                    // =================================================
+                    // VIS FEIL
+                    // =================================================
+
+                    resultBox.innerHTML = `
+                        <div class="alert alert-danger py-2 px-3 mb-0">
+                            ${error.message}
+                        </div>
+                    `;
+
+                    resultBox.style.display =
+                        "";
+
+                }
+                finally {
+
+                    button.disabled =
+                        false;
+
+                    button.textContent =
+                        originalText;
+
+                }
+
+            }
+        );
+
+    });
+
+
+    // =====================================================
+    // KJØR FILTER VED LASTING
+    // =====================================================
+
+    updateClassFilter();
+    filterStudents();
+
+</script>

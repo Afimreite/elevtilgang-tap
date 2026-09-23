@@ -1,0 +1,130 @@
+﻿@{
+    ViewData["Title"] = "Forside";
+}
+
+<div class="container py-5">
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-7">
+
+            <!-- Overskrift -->
+            <div class="text-center mb-5">
+
+                <h1 class="display-5 fw-semibold mb-3">
+                    Elevtilgang
+                </h1>
+
+                <p class="lead text-muted">
+                    Opprett midlertidig påloggingskode (TAP) for elever
+                    som trenger hjelp med innlogging.
+                </p>
+
+            </div>
+
+            <!-- Hovedhandling -->
+            <div class="card shadow-sm border-0 mb-4">
+
+                <div class="card-body p-4 p-md-5 text-center">
+
+                    <h2 class="h4 mb-3">
+                        Generer TAP for elev
+                    </h2>
+
+                    <p class="text-muted mb-4">
+                        Finn riktig elev ved å velge skole og klasse,
+                        og opprett en ny midlertidig påloggingskode.
+                    </p>
+
+                    <a asp-controller="A3"
+                       asp-action="Index"
+                       class="btn btn-primary btn-lg px-5">
+                        Finn elev og generer TAP
+                    </a>
+
+                </div>
+
+            </div>
+
+            <!-- Hvordan fungerer det -->
+            <div class="card border-0 bg-light mb-4">
+
+                <div class="card-body p-4">
+
+                    <h2 class="h5 mb-4">
+                        Slik gjør du
+                    </h2>
+
+                    <div class="row">
+
+                        <!-- Steg 1 -->
+                        <div class="col-md-6 mb-4">
+
+                            <strong>
+                                1. Finn eleven
+                            </strong>
+
+                            <div class="text-muted">
+                                Velg skole og klasse for å finne riktig elev.
+                            </div>
+
+                        </div>
+
+                        <!-- Steg 2 -->
+                        <div class="col-md-6 mb-4">
+
+                            <strong>
+                                2. Kontroller eleven
+                            </strong>
+
+                            <div class="text-muted">
+                                Kontroller navn og klasse før du fortsetter.
+                            </div>
+
+                        </div>
+
+                        <!-- Steg 3 -->
+                        <div class="col-md-6">
+
+                            <strong>
+                                3. Generer TAP
+                            </strong>
+
+                            <div class="text-muted">
+                                Trykk på Generer TAP ved riktig elev.
+                            </div>
+
+                        </div>
+
+                        <!-- Steg 4 -->
+                        <div class="col-md-6">
+
+                            <strong>
+                                4. Gi koden til eleven
+                            </strong>
+
+                            <div class="text-muted">
+                                TAP-koden kan brukes av eleven til pålogging.
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Viktig informasjon -->
+                    <div class="alert alert-warning mt-4 mb-0 py-2 px-3 small">
+
+                        <strong>Merk:</strong>
+                        Når en ny TAP-kode opprettes, erstattes eventuell
+                        tidligere TAP-kode for eleven.
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Innlogget bruker -->
+        </div>
+    </div>
+
+</div>
