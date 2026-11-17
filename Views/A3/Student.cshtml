@@ -1,0 +1,289 @@
+@model List<tap.Models.StudentDeviceViewModel>
+
+@{
+    ViewData["Title"] = $"Enheter – {ViewBag.StudentName}";
+    var actionHistory = ViewBag.ActionHistory as List<tap.Services.AuditHistoryItem> ?? new();
+}
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <a asp-controller="A3" asp-action="Index" class="text-decoration-none">&larr; Tilbake til elevlisten</a>
+            <h1 class="h2 mt-3 mb-1">@ViewBag.StudentName</h1>
+            <p class="text-muted mb-0">@ViewBag.StudentUpn</p>
+        </div>
+        <span class="badge text-bg-secondary">@Model.Count enhet(er)</span>
+    </div>
+
+    @if (TempData["Message"] is string message)
+    {
+        <div class="alert alert-success">@message</div>
+    }
+    @if (TempData["Error"] is string error)
+    {
+        <div class="alert alert-danger">@error</div>
+    }
+
+    @if (Model.Count == 0)
+    {
+        <div class="alert alert-light border">Ingen Intune-enheter er registrert på denne eleven.</div>
+    }
+    else
+    {
+        foreach (var device in Model)
+        {
+            <section class="card border-0 shadow-sm mb-4 device-card">
+                <div class="card-body">
+                    <div class="device-card-header">
+                        <div class="device-heading">
+                            <span class="device-icon" aria-hidden="true">&#128187;</span><div class="min-w-0">
+                            <h2 class="h4 mb-1 text-break">@(string.IsNullOrWhiteSpace(device.Name) ? "Uten enhetsnavn" : device.Name)</h2>
+                            <p class="device-model mb-0 text-break">@(string.IsNullOrWhiteSpace(device.Model) ? "Modell ikke tilgjengelig" : device.Model)</p>
+                            </div></div>
+                            <div class="device-statuses">
+                            <span class="badge @(device.ComplianceState.Equals("compliant", StringComparison.OrdinalIgnoreCase) ? "text-bg-success" : "text-bg-warning")">@(string.IsNullOrWhiteSpace(device.ComplianceState) ? "Ikke tilgjengelig" : device.ComplianceState)</span>
+                            <span class="badge text-bg-light border text-dark">Intune</span>
+                        </div>
+                        <div class="device-actions">
+                        @if (ViewBag.CanWipe == true)
+                        {
+                            <button type="button" class="btn btn-outline-secondary btn-sm sync-device-button" data-device-id="@device.Id" data-bs-toggle="tooltip" title="Ber Intune om å synkronisere enheten og hente nye innstillinger. Enheten må være på nett for å utføre handlingen.">
+                                Synkroniser enhet
+                            </button>
+                        }
+                        @if (ViewBag.CanViewBitlocker == true && !string.IsNullOrWhiteSpace(device.AzureAdDeviceId))
+                        {
+                            <button type="button" class="btn btn-outline-primary btn-sm bitlocker-button"
+                                    data-device-id="@device.Id" data-device-name="@device.Name" data-bs-toggle="tooltip" title="Viser gjenopprettingsnøkkelen som kan brukes til å låse opp en kryptert PC. Å vise nøkkelen påvirker ikke enheten.">
+                                Vis BitLocker-nøkkel
+                            </button>
+                        }
+                        @if (ViewBag.CanWipe == true)
+                        {
+                            <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#wipe-@device.Id" title="Tilbakestiller enheten og kan slette alle lokale data. Handlingen kan ikke angres.">
+                                Wipe enhet
+                            </button>
+                        }
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-4"><strong>Modell</strong><div>@(string.IsNullOrWhiteSpace(device.Model) ? "Ikke tilgjengelig" : device.Model)</div></div>
+                        <div class="col-md-4"><strong>Management name</strong><div>@(string.IsNullOrWhiteSpace(device.ManagementName) ? "Ikke tilgjengelig" : device.ManagementName)</div></div>
+                        <div class="col-md-4"><strong>Produsent</strong><div>@(string.IsNullOrWhiteSpace(device.Manufacturer) ? "Ikke tilgjengelig" : device.Manufacturer)</div></div>
+                        <div class="col-md-4"><strong>Operativsystem</strong><div>@(string.IsNullOrWhiteSpace(device.OperatingSystem) ? "Ikke tilgjengelig" : device.OperatingSystem)</div></div>
+                        <div class="col-md-4"><strong>Serienummer</strong><div>@(string.IsNullOrWhiteSpace(device.SerialNumber) ? "Ikke tilgjengelig" : device.SerialNumber)</div></div>
+                        <div class="col-md-4"><strong>Sist synkronisert</strong><div>@(device.LastSyncDateTime?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "Ikke tilgjengelig")</div></div>
+                        <div class="col-md-4"><strong>Enrolled date</strong><div>@(device.EnrolledDateTime?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "Ikke tilgjengelig")</div></div>
+                    </div>
+
+                    <div class="device-health mt-4">
+                        <h3 class="h6 mb-3">Enhetshelse</h3>
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-4"><strong>Compliance</strong><div class="@(device.ComplianceState.Equals("compliant", StringComparison.OrdinalIgnoreCase) ? "text-success" : "text-warning")">@(string.IsNullOrWhiteSpace(device.ComplianceState) ? "Ikke tilgjengelig" : device.ComplianceState)</div></div>
+                            <div class="col-md-4"><strong>Windows-versjon</strong><div>@(string.IsNullOrWhiteSpace(device.OsVersion) ? "Ikke tilgjengelig" : device.OsVersion)</div></div>
+                            <div class="col-md-4"><strong>Kryptering</strong><div>@(device.IsEncrypted.HasValue ? (device.IsEncrypted.Value ? "Aktivert" : "Ikke aktivert") : "Ikke tilgjengelig")</div></div>
+                            <div class="col-md-4"><strong>Siste Intune-kontakt</strong><div>@(device.LastSyncDateTime?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "Ikke tilgjengelig")</div></div>
+                            <div class="col-md-4"><strong>Ledig lagring</strong><div>@(device.FreeStorageSpaceInBytes.HasValue ? FormatBytes(device.FreeStorageSpaceInBytes.Value) : "Ikke tilgjengelig")</div></div>
+                            <div class="col-md-4"><strong>Total lagring</strong><div>@(device.TotalStorageSpaceInBytes.HasValue ? FormatBytes(device.TotalStorageSpaceInBytes.Value) : "Ikke tilgjengelig")</div></div>
+                        </div>
+                        @if (device.IsLastSyncOlderThanSevenDays)
+                        {
+                            <div class="alert alert-warning py-2 mt-3 mb-0">Siste Intune-kontakt er eldre enn 7 dager, eller ikke tilgjengelig.</div>
+                        }
+                    </div>
+
+                    <div class="device-info mt-4">
+                        <h3 class="h6 mb-3">Enhetsinformasjon</h3>
+                        <div class="row g-3"><div class="col-md-6"><span class="health-label">Serienummer</span><strong class="d-block text-break">@(string.IsNullOrWhiteSpace(device.SerialNumber) ? "Ikke tilgjengelig" : device.SerialNumber)</strong></div><div class="col-md-6"><span class="health-label">Registrert i Intune</span><strong class="d-block">@(device.EnrolledDateTime?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "Ikke tilgjengelig")</strong></div></div>
+                        <div class="technical-details mt-3"><h3 class="h6 mb-3">Tekniske detaljer</h3><div class="row g-3 mt-1"><div class="col-md-6"><span class="health-label">Management name</span><strong class="d-block text-break">@(string.IsNullOrWhiteSpace(device.ManagementName) ? "Ikke tilgjengelig" : device.ManagementName)</strong></div><div class="col-md-6"><span class="health-label">Produsent</span><strong class="d-block">@(string.IsNullOrWhiteSpace(device.Manufacturer) ? "Ikke tilgjengelig" : device.Manufacturer)</strong></div><div class="col-md-6"><span class="health-label">Operativsystem</span><strong class="d-block">@(string.IsNullOrWhiteSpace(device.OperatingSystem) ? "Ikke tilgjengelig" : device.OperatingSystem)</strong></div></div></div>
+                    </div>
+                </div>
+            </section>
+
+            @if (ViewBag.CanWipe == true)
+            {
+                <div class="modal fade" id="wipe-@device.Id" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                        <div class="modal-content">
+                            <form asp-controller="A3" asp-action="WipeDevice" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="deviceId" value="@device.Id" />
+                                <input type="hidden" name="studentId" value="@Context.Request.RouteValues["id"]" />
+                                <div class="modal-header">
+                                    <h2 class="modal-title h5">Wipe @(string.IsNullOrWhiteSpace(device.Name) ? "enhet" : device.Name)?</h2>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Lukk"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>Wipe tilbakestiller enheten og kan fjerne data og innstillinger. Handlingen kan ikke angres.</p>
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="radio" name="keepUserData" value="false" id="wipe-all-@device.Id" checked />
+                                        <label class="form-check-label" for="wipe-all-@device.Id"><strong>Tilbakestill enheten og fjern alle data</strong></label>
+                                    </div>
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="radio" name="keepUserData" value="true" id="wipe-keep-@device.Id" />
+                                        <label class="form-check-label" for="wipe-keep-@device.Id"><strong>Tilbakestill enheten, men behold brukerdata</strong></label>
+                                    </div>
+                                    <div class="alert alert-warning">Kontroller serienummeret før du fortsetter: <strong>@device.SerialNumber</strong></div>
+                                    <div class="form-check mt-4">
+                                        <input class="form-check-input wipe-confirmation" type="checkbox" id="wipe-confirm-@device.Id" name="confirmed" value="true" />
+                                        <label class="form-check-label" for="wipe-confirm-@device.Id">Jeg forstår at denne handlingen kan slette data og ikke kan angres.</label>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Avbryt</button>
+                                    <button type="submit" class="btn btn-danger wipe-submit" disabled>Wipe enhet</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    }
+
+    <section class="card border-0 shadow-sm mb-4 action-history">
+        <div class="card-body">
+            <h2 class="h5 mb-3">Handlingshistorikk</h2>
+            @if (actionHistory.Count == 0)
+            {
+                <p class="text-muted mb-0">Ingen registrerte handlinger.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead><tr><th>Tidspunkt</th><th>Handling</th><th>Serienummer</th><th>Utført av</th><th>Resultat</th></tr></thead>
+                        <tbody>
+                        @foreach (var entry in actionHistory)
+                        {
+                            <tr>
+                                <td class="text-nowrap">@entry.Timestamp.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                                <td>@ActionLabel(entry.Action)</td>
+                                <td>@(string.IsNullOrWhiteSpace(entry.DeviceSerial) || entry.DeviceSerial == "-" ? "Ukjent enhet" : entry.DeviceSerial)</td>
+                                <td class="text-break">@(string.IsNullOrWhiteSpace(entry.OperatorUpn) || entry.OperatorUpn == "-" ? "Ukjent" : entry.OperatorUpn)</td>
+                                <td><span class="badge @(string.Equals(entry.Result, "SUCCESS", StringComparison.OrdinalIgnoreCase) ? "text-bg-success" : "text-bg-danger")">@ResultLabel(entry.Result)</span></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </section>
+</div>
+
+@functions {
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        var units = new[] { "KB", "MB", "GB", "TB" };
+        var value = (double)bytes;
+        var unit = -1;
+        do { value /= 1024; unit++; } while (value >= 1024 && unit < units.Length - 1);
+        return $"{value:0.##} {units[unit]}";
+    }
+
+    private static string RelativeTime(DateTimeOffset? timestamp)
+    {
+        if (!timestamp.HasValue) return "Ikke tilgjengelig";
+        var days = Math.Max(0, (int)(DateTimeOffset.UtcNow - timestamp.Value.ToUniversalTime()).TotalDays);
+        if (days == 0) return "I dag";
+        return days == 1 ? "1 dag siden" : $"{days} dager siden";
+    }
+
+    private static string ActionLabel(string action) => action switch
+    {
+        "GenerateTAP" => "Genererte TAP",
+        "WipeDevice" => "Wipet enhet",
+        "ViewBitLockerKey" => "Hentet BitLocker-nøkkel",
+        "ViewBitLockerKeys" => "Hentet BitLocker-metadata",
+        "SyncDevice" => "Synkroniserte enhet",
+        _ => "Handling"
+    };
+
+    private static string ResultLabel(string? result) =>
+        string.Equals(result, "SUCCESS", StringComparison.OrdinalIgnoreCase) ? "Utført" : "Feilet";
+}
+
+@if (ViewBag.CanViewBitlocker == true)
+{
+    <input type="hidden" id="bitlocker-student-id" value="@Context.Request.RouteValues["id"]" />
+}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+        new bootstrap.Tooltip(element);
+    });
+
+    document.querySelectorAll('.device-actions [title]').forEach(function (element) {
+        if (!bootstrap.Tooltip.getInstance(element)) new bootstrap.Tooltip(element);
+    });
+
+    });
+
+    document.querySelectorAll('.wipe-confirmation').forEach(function (checkbox) {
+        checkbox.addEventListener('change', function () {
+            const form = checkbox.closest('form');
+            form.querySelector('.wipe-submit').disabled = !checkbox.checked;
+        });
+    });
+</script>
+<script>
+    (function () {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        const studentId = '@Context.Request.RouteValues["id"]';
+        document.querySelectorAll('.sync-device-button').forEach(function (button) {
+            button.addEventListener('click', async function () {
+                if (!window.confirm('Send synkroniseringsforespørsel til Intune?')) return;
+                button.disabled = true;
+                const original = button.textContent;
+                button.textContent = 'Sender...';
+                try {
+                    const body = new URLSearchParams({ studentId, deviceId: button.dataset.deviceId, __RequestVerificationToken: token });
+                    const response = await fetch('@Url.Action("SyncDevice", "A3")', { method: 'POST', body });
+                    const data = await response.json();
+                    if (!response.ok || !data.success) throw new Error(data.message || 'Synkronisering kunne ikke sendes.');
+                    alert(data.message);
+                } catch (error) { alert(error.message); }
+                finally { button.disabled = false; button.textContent = original; }
+            });
+        });
+    })();
+</script>
+
+@if (ViewBag.CanViewBitlocker == true)
+{
+    <div class="modal fade" id="bitlocker-modal" data-keys-url="@Url.Action("GetBitlockerKeys", "A3")" data-key-url="@Url.Action("GetBitlockerKey", "A3")" tabindex="-1" aria-labelledby="bitlocker-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="bitlocker-title">BitLocker – <span id="bitlocker-device-name"></span></h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Lukk"></button>
+                </div>
+                <div class="modal-body">
+                    @Html.AntiForgeryToken()
+                    <p id="bitlocker-status" role="status" aria-live="polite"></p>
+                    <div id="bitlocker-error" class="alert alert-danger" role="alert" hidden></div>
+                    <div id="bitlocker-selection" hidden>
+                        <label for="bitlocker-key-select" class="form-label">Velg nøkkel (ID, opprettet, volumtype)</label>
+                        <select id="bitlocker-key-select" class="form-select mb-3"></select>
+                        <p class="small text-muted">Bekreft at du vil hente den valgte gjenopprettingsnøkkelen. Oppslaget registreres i handlingshistorikken.</p>
+                        <button type="button" id="bitlocker-fetch" class="btn btn-primary">Bekreft og hent nøkkel</button>
+                    </div>
+                    <div id="bitlocker-value-panel" class="mt-3" hidden>
+                        <p class="small text-muted mb-1">Gjenopprettingsnøkkel</p>
+                        <div id="bitlocker-value" class="font-monospace text-break user-select-all fw-bold fs-5 mb-2"></div>
+                        <button type="button" id="bitlocker-copy" class="btn btn-outline-secondary btn-sm">Kopier nøkkel</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Lukk</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+@section Scripts {
+    <script src="~/js/student-bitlocker.js" asp-append-version="true"></script>
+}

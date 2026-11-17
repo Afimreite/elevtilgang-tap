@@ -1,0 +1,45 @@
+@{
+    ViewData["Title"] = "Ingen tilgang";
+}
+
+<div class="container py-5">
+
+    <div class="row justify-content-center">
+        <div class="col-lg-7 col-xl-6">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body p-5 text-center">
+
+                    <div class="display-4 mb-3">
+                        🔒
+                    </div>
+
+                    <h1 class="h3 mb-3">
+                        Du har ikke tilgang
+                    </h1>
+
+                    <p class="text-muted mb-4">
+                        Du er logget inn, men kontoen din har ikke tilgang
+                        til denne delen av Elevtilgang.
+                    </p>
+
+                    <p class="text-muted small mb-4">
+                        Tilgang gis til autoriserte lærere, superbrukere
+                        og IT-drift.
+                    </p>
+
+                    <a asp-controller="Home"
+                       asp-action="Index"
+                       class="btn btn-primary">
+                        Tilbake til forsiden
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+</div>

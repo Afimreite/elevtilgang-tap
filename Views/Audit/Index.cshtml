@@ -1,0 +1,69 @@
+@model List<tap.Models.AuditLogEntry>
+
+@{
+    ViewData["Title"] = "Audit-logg";
+}
+
+<div class="py-4">
+    <div class="mb-4">
+        <h1 class="h2 mb-2">Audit-logg</h1>
+        <p class="text-muted mb-2">Oversikt over administrative handlinger i Elevtilgang.</p>
+        <div class="alert alert-secondary small mb-0">
+            Opplysningene hentes fra applikasjonens lokale auditlogg på serveren.
+            Loggen kan være ufullstendig ved drifts-, skrive- eller konfigurasjonsfeil.
+            Den bør ikke alene brukes som dokumentasjon på alle administrative handlinger.
+            For wipe og synkronisering betyr «Forespørsel sendt» at kommandoen er sendt,
+            ikke at enheten har fullført handlingen.
+        </div>
+    </div>
+
+    @if (ViewBag.ReadError == true)
+    {
+        <div class="alert alert-warning" role="alert">Auditloggen kunne ikke leses. Prøv igjen senere.</div>
+    }
+    else if (Model.Count == 0)
+    {
+        <div class="alert alert-info">Ingen audit-hendelser er registrert.</div>
+    }
+    else
+    {
+        <p class="small text-muted">Viser de siste @Model.Count hendelsene (maksimalt 500), nyeste først.</p>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Tidspunkt</th>
+                        <th scope="col">Handling</th>
+                        <th scope="col">Resultat</th>
+                        <th scope="col">Utført av</th>
+                        <th scope="col">Elev</th>
+                        <th scope="col">Skole</th>
+                        <th scope="col">Enhet / serienummer</th>
+                        <th scope="col">IP-adresse</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var entry in Model)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@entry.Timestamp.ToString("dd.MM.yyyy HH:mm:ss")</td>
+                            <td>@entry.ActionLabel</td>
+                            <td><span class="badge @entry.ResultStyle">@entry.ResultLabel</span></td>
+                            <td class="text-break">@entry.Operator</td>
+                            <td>
+                                <strong>@entry.StudentName</strong>
+                                @if (entry.StudentUpn != "—")
+                                {
+                                    <div class="text-muted small text-break">@entry.StudentUpn</div>
+                                }
+                            </td>
+                            <td>@entry.School</td>
+                            <td class="text-break">@entry.DeviceSerial</td>
+                            <td class="text-break">@entry.IpAddress</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
